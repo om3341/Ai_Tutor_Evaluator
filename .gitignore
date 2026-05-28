@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# Logs and runtime artifacts
+logs/
+*.log
+*.pid
+
+# Streamlit
+.streamlit/secrets.toml
+
+# FastAPI / local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Alembic / generated caches
+backend/__pycache__/
+frontend/__pycache__/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Model and benchmark artifacts
+models/
+checkpoints/
+*.safetensors
+*.gguf
+*.bin
