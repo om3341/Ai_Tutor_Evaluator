@@ -41,6 +41,20 @@ from backend.schemas.latency import (
     LatencyHistoryResponse,
     ModelLatencyAnalytics,
 )
+from backend.schemas.simulation import (
+    ConversationJudgeEvaluation,
+    PersonaDescription,
+    PERSONAS,
+    SimulationLoadRequest,
+    SimulationMessage,
+    SimulationRunRequest,
+    SimulationRunResponse,
+    SimulationRunSummary,
+    SimulationScores,
+    SimulationState,
+    SIMULATION_SCORE_FIELDS,
+)
+from backend.schemas.rag import RagChunk, RagContext, RagHealthResponse, RagRetrieveRequest
 
 __all__ = [
     "CriterionScores",
@@ -81,4 +95,19 @@ __all__ = [
     "SCORE_FIELDS",
     "SingleJudgeEvaluation",
     "Winner",
+    "ConversationJudgeEvaluation",
+    "PersonaDescription",
+    "PERSONAS",
+    "SimulationLoadRequest",
+    "SimulationMessage",
+    "SimulationRunRequest",
+    "SimulationRunResponse",
+    "SimulationRunSummary",
+    "SimulationScores",
+    "SimulationState",
+    "SIMULATION_SCORE_FIELDS",
+    "RagChunk",
+    "RagContext",
+    "RagHealthResponse",
+    "RagRetrieveRequest",
 ]

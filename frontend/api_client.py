@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import requests
@@ -344,6 +345,200 @@ def get_benchmark_runs(base_url: str, limit: int = 25, timeout_seconds: float = 
         raise APIClientError(f"Could not load benchmark runs: {exc}") from exc
     if response.status_code >= 400:
         raise APIClientError(f"Benchmark runs returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def get_simulation_state(base_url: str, timeout_seconds: float = 10.0) -> dict[str, Any]:
+    try:
+        response = requests.get(f"{base_url.rstrip('/')}/simulations/state", timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not read simulation state: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Simulation state returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def get_simulation_personas(base_url: str, timeout_seconds: float = 10.0) -> list[dict[str, Any]]:
+    try:
+        response = requests.get(f"{base_url.rstrip('/')}/simulations/personas", timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not load simulation personas: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Simulation personas returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def get_rag_health(base_url: str, timeout_seconds: float = 10.0) -> dict[str, Any]:
+    try:
+        response = requests.get(f"{base_url.rstrip('/')}/simulations/rag/health", timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not read Qdrant status: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Qdrant status returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def load_simulation_models(
+    base_url: str,
+    *,
+    tutor_model: str | None = None,
+    student_model: str | None = None,
+    timeout_seconds: float = 240.0,
+) -> dict[str, Any]:
+    try:
+        response = requests.post(
+            f"{base_url.rstrip('/')}/simulations/load",
+            json={"tutor_model": tutor_model, "student_model": student_model},
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not load simulation model: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Simulation load returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def unload_simulation_models(base_url: str, timeout_seconds: float = 20.0) -> dict[str, Any]:
+    try:
+        response = requests.post(f"{base_url.rstrip('/')}/simulations/unload", timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not unload simulation models: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Simulation unload returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def unload_simulation_tutor(base_url: str, timeout_seconds: float = 20.0) -> dict[str, Any]:
+    try:
+        response = requests.post(f"{base_url.rstrip('/')}/simulations/tutor/unload", timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not unload tutor model: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Tutor unload returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def unload_simulation_student(base_url: str, timeout_seconds: float = 20.0) -> dict[str, Any]:
+    try:
+        response = requests.post(f"{base_url.rstrip('/')}/simulations/student/unload", timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not unload student model: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Student unload returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def stop_simulation(base_url: str, timeout_seconds: float = 10.0) -> dict[str, Any]:
+    try:
+        response = requests.post(f"{base_url.rstrip('/')}/simulations/stop", timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not stop simulation: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Simulation stop returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def run_simulation(
+    *,
+    base_url: str,
+    tutor_model: str,
+    student_model: str,
+    topic: str,
+    student_level: str,
+    language: str,
+    persona: str,
+    tutor_temperature: float,
+    student_temperature: float,
+    turns: int,
+    timeout_seconds: float = 900.0,
+) -> dict[str, Any]:
+    payload = {
+        "tutor_model": tutor_model,
+        "student_model": student_model,
+        "topic": topic,
+        "student_level": student_level,
+        "language": language,
+        "persona": persona,
+        "tutor_temperature": tutor_temperature,
+        "student_temperature": student_temperature,
+        "turns": turns,
+    }
+    try:
+        response = requests.post(f"{base_url.rstrip('/')}/simulations/run", json=payload, timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not run simulation: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Simulation run returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def stream_simulation(
+    *,
+    base_url: str,
+    tutor_model: str,
+    student_model: str,
+    topic: str,
+    student_level: str,
+    language: str,
+    persona: str,
+    tutor_temperature: float,
+    student_temperature: float,
+    turns: int,
+    timeout_seconds: float = 900.0,
+):
+    payload = {
+        "tutor_model": tutor_model,
+        "student_model": student_model,
+        "topic": topic,
+        "student_level": student_level,
+        "language": language,
+        "persona": persona,
+        "tutor_temperature": tutor_temperature,
+        "student_temperature": student_temperature,
+        "turns": turns,
+    }
+    try:
+        with requests.post(
+            f"{base_url.rstrip('/')}/simulations/run-stream",
+            json=payload,
+            stream=True,
+            timeout=timeout_seconds,
+        ) as response:
+            if response.status_code >= 400:
+                raise APIClientError(f"Simulation stream returned {response.status_code}: {_response_detail(response)}")
+            for line in response.iter_lines(decode_unicode=True):
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                except ValueError as exc:
+                    raise APIClientError(f"Simulation stream returned invalid JSON: {line}") from exc
+                if event.get("event") == "error":
+                    status = event.get("status_code", 500)
+                    detail = event.get("detail", "Unknown streaming error")
+                    raise APIClientError(f"Simulation stream returned {status}: {detail}")
+                yield event
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not stream simulation: {exc}") from exc
+
+
+def get_simulation_runs(base_url: str, limit: int = 25, timeout_seconds: float = 10.0) -> list[dict[str, Any]]:
+    try:
+        response = requests.get(f"{base_url.rstrip('/')}/simulations/runs", params={"limit": limit}, timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not load simulation history: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Simulation history returned {response.status_code}: {_response_detail(response)}")
+    return response.json()
+
+
+def get_simulation_run(base_url: str, run_id: str, timeout_seconds: float = 10.0) -> dict[str, Any]:
+    try:
+        response = requests.get(f"{base_url.rstrip('/')}/simulations/runs/{run_id}", timeout=timeout_seconds)
+    except requests.RequestException as exc:
+        raise APIClientError(f"Could not load simulation replay: {exc}") from exc
+    if response.status_code >= 400:
+        raise APIClientError(f"Simulation replay returned {response.status_code}: {_response_detail(response)}")
     return response.json()
 
 

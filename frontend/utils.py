@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 
-MODEL_OPTIONS = ["Sarvam 30B", "Qwen 3.8B", "google/gemma-4-E4B", "Llama 3.1 8B"]
+MODEL_OPTIONS = ["Qwen 3.5 4B", "Qwen 3.5 2B Student", "google/gemma-4-E4B", "Llama 3.1 8B"]
 
 _THINK_BLOCK_RE = re.compile(r"<think\b[^>]*>.*?</think>", flags=re.IGNORECASE | re.DOTALL)
 _UNCLOSED_THINK_RE = re.compile(r"<think\b[^>]*>.*$", flags=re.IGNORECASE | re.DOTALL)

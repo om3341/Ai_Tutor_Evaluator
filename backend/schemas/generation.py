@@ -11,7 +11,7 @@ class ModelGenerationRequest(BaseModel):
     student_prompt: str = Field(..., min_length=1, max_length=8000)
     student_level: str = Field(..., min_length=1, max_length=120)
     language: str = Field(..., min_length=1, max_length=120)
-    model_name: str = Field(default="Qwen 3.8B", min_length=1, max_length=120)
+    model_name: str = Field(default="Qwen 3.5 4B", min_length=1, max_length=120)
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     max_tokens: int | None = Field(default=None, ge=1, le=4096)
 

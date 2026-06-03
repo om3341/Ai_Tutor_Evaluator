@@ -13,27 +13,29 @@ def inject_theme() -> None:
         """
         <style>
         .stApp {
-            background: #ffffff;
-            color: #1f2937;
+            background:
+                radial-gradient(880px 420px at 88% -10%, #ffffff 0%, rgba(255,255,255,0) 58%),
+                #f7fbff;
+            color: #0f172a;
         }
         section[data-testid="stSidebar"] {
-            background: #fff7ed;
-            border-right: 1px solid #fed7aa;
+            background: #eef7ff;
+            border-right: 1px solid #bfdbfe;
         }
         h1, h2, h3, h4, h5, h6,
         .stMarkdown, .stText, label, p {
-            color: #1f2937;
+            color: #0f172a;
         }
         .arena-card {
-            border: 1px solid #fed7aa;
+            border: 1px solid #bfdbfe;
             background: #ffffff;
             border-radius: 8px;
             padding: 1.05rem;
             box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
         }
         .winner-card {
-            border-color: #f97316;
-            box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.22), 0 14px 32px rgba(249, 115, 22, 0.14);
+            border-color: #0284c7;
+            box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.22), 0 14px 32px rgba(2, 132, 199, 0.14);
         }
         .metric-pill {
             display: inline-flex;
@@ -41,14 +43,14 @@ def inject_theme() -> None:
             align-items: center;
             padding: 0.24rem 0.55rem;
             border-radius: 999px;
-            background: #fff7ed;
-            border: 1px solid #fdba74;
+            background: #e0f2fe;
+            border: 1px solid #7dd3fc;
             font-size: 0.84rem;
-            color: #9a3412;
+            color: #075985;
             margin: 0.18rem 0.18rem 0.18rem 0;
         }
         .small-muted {
-            color: #9a3412;
+            color: #0369a1;
             font-size: 0.9rem;
         }
         .response-box {
@@ -59,7 +61,7 @@ def inject_theme() -> None:
         }
         div[data-testid="stMetric"] {
             background: #ffffff;
-            border: 1px solid #fed7aa;
+            border: 1px solid #bfdbfe;
             padding: 0.8rem;
             border-radius: 8px;
             box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
@@ -70,45 +72,45 @@ def inject_theme() -> None:
         }
         .stTabs [data-baseweb="tab-list"] {
             gap: 0.35rem;
-            border-bottom: 1px solid #fed7aa;
+            border-bottom: 1px solid #bfdbfe;
         }
         .stTabs [data-baseweb="tab"] {
             background: #ffffff;
-            border: 1px solid #fed7aa;
+            border: 1px solid #bfdbfe;
             border-bottom: none;
             border-radius: 8px 8px 0 0;
-            color: #9a3412;
+            color: #075985;
             font-weight: 600;
             padding: 0.55rem 0.9rem;
         }
         .stTabs [aria-selected="true"] {
-            background: #f97316;
+            background: #0284c7;
             color: #ffffff;
-            border-color: #f97316;
+            border-color: #0284c7;
         }
         .stButton > button {
             border-radius: 8px;
             font-weight: 700;
             min-height: 2.65rem;
-            border: 1px solid #fdba74;
+            border: 1px solid #7dd3fc;
             background: #ffffff;
-            color: #9a3412;
-            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.10);
+            color: #075985;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.10);
         }
         .stButton > button:hover {
-            border-color: #f97316;
-            color: #7c2d12;
-            background: #fff7ed;
+            border-color: #0284c7;
+            color: #0c4a6e;
+            background: #e0f2fe;
         }
         .stButton > button[kind="primary"] {
-            background: #f97316;
+            background: #0284c7;
             color: #ffffff;
-            border-color: #f97316;
-            box-shadow: 0 10px 22px rgba(249, 115, 22, 0.25);
+            border-color: #0284c7;
+            box-shadow: 0 10px 22px rgba(2, 132, 199, 0.25);
         }
         .stButton > button[kind="primary"]:hover {
-            background: #ea580c;
-            border-color: #ea580c;
+            background: #0369a1;
+            border-color: #0369a1;
             color: #ffffff;
         }
         .stButton > button:disabled,
@@ -122,7 +124,254 @@ def inject_theme() -> None:
             border-radius: 8px;
         }
         textarea, input, div[data-baseweb="select"] > div {
-            border-color: #fed7aa;
+            border-color: #bfdbfe;
+        }
+        textarea:focus, input:focus {
+            border-color: #0284c7 !important;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
+        }
+        .simulation-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 0.35rem 0 0.5rem 0;
+        }
+        .simulation-heading h2 {
+            margin: 0;
+            font-size: 1.55rem;
+        }
+        .simulation-heading p {
+            margin: 0.35rem 0 0 0;
+            color: #6b7280;
+            font-size: 0.96rem;
+        }
+        .role-label {
+            color: #0369a1;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin: 0 0 0.38rem 0;
+            text-transform: uppercase;
+        }
+        .model-status {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            min-height: 3.15rem;
+            margin: 0.55rem 0 0.65rem 0;
+            padding: 0.65rem 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+        .model-status span:last-child {
+            display: flex;
+            flex-direction: column;
+            gap: 0.08rem;
+        }
+        .model-status strong {
+            color: #374151;
+            font-size: 0.88rem;
+        }
+        .model-status small {
+            color: #6b7280;
+            font-size: 0.78rem;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 0.62rem;
+            height: 0.62rem;
+            flex: 0 0 0.62rem;
+            border-radius: 999px;
+        }
+        .status-dot.online {
+            background: #0284c7;
+            box-shadow: 0 0 0 3px #bae6fd;
+        }
+        .status-dot.offline {
+            background: #9ca3af;
+            box-shadow: 0 0 0 3px #f3f4f6;
+        }
+        .persona-summary {
+            min-height: 4.7rem;
+            margin-top: 0.55rem;
+            padding: 0.7rem 0.8rem;
+            border-left: 3px solid #0284c7;
+            border-radius: 0 6px 6px 0;
+            background: #e0f2fe;
+        }
+        .persona-summary strong {
+            color: #075985;
+            font-size: 0.82rem;
+        }
+        .persona-summary p {
+            margin: 0.22rem 0 0 0;
+            color: #4b5563;
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.22rem;
+            margin-top: 1.2rem;
+            padding: 1.5rem;
+            border: 1px dashed #7dd3fc;
+            border-radius: 8px;
+            background: #f8fcff;
+            color: #4b5563;
+            text-align: center;
+        }
+        .empty-state strong {
+            color: #075985;
+        }
+        .empty-state span {
+            font-size: 0.9rem;
+        }
+        .live-context {
+            margin: 0.35rem 0 0.85rem 0;
+            padding: 0.65rem 0.8rem;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            background: #e0f2fe;
+            color: #075985;
+            font-size: 0.9rem;
+        }
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 0.4rem 0 1.1rem 0;
+            padding: 0.78rem 1rem;
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 10px 30px rgba(2, 132, 199, 0.08);
+        }
+        .brand-mark {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #0369a1;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .classroom-status {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            margin: 0.25rem 0 1rem 0;
+            padding: 0.78rem 0.9rem;
+            border: 1px solid #bfdbfe;
+            border-radius: 11px;
+            background: #ffffff;
+        }
+        .classroom-status .pulse-dot {
+            width: 0.62rem;
+            height: 0.62rem;
+            border-radius: 999px;
+            background: #94a3b8;
+            flex: 0 0 0.62rem;
+        }
+        .classroom-status.live .pulse-dot {
+            background: #0284c7;
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+        }
+        .phase-pill {
+            margin-left: auto;
+            padding: 0.18rem 0.55rem;
+            border: 1px solid #bfdbfe;
+            border-radius: 7px;
+            background: #f0f9ff;
+            color: #0369a1;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .stage-card, .activity-card {
+            border: 1px solid #bfdbfe;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 1rem;
+            box-shadow: 0 18px 45px -32px rgba(15, 23, 42, 0.45);
+        }
+        .stage-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.8rem;
+        }
+        .stage-title h3 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 1.05rem;
+        }
+        .lesson-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.24rem 0.55rem;
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            background: #f0f9ff;
+            color: #075985;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        .stream {
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+        .msg {
+            padding: 0.76rem 0.85rem;
+            border-radius: 12px;
+            border: 1px solid #dbeafe;
+            line-height: 1.55;
+            font-size: 0.92rem;
+            white-space: pre-wrap;
+        }
+        .msg .who {
+            color: #64748b;
+            font-size: 0.64rem;
+            font-weight: 900;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            margin-bottom: 0.22rem;
+        }
+        .msg.tut {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        .msg.stu {
+            background: #ffffff;
+            border-color: #bae6fd;
+        }
+        .activity-card h4 {
+            margin: 0 0 0.75rem 0;
+            color: #075985;
+            font-size: 0.84rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .activity-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.7rem;
+            padding: 0.52rem 0;
+            border-bottom: 1px solid #e0f2fe;
+            color: #475569;
+            font-size: 0.88rem;
+        }
+        .activity-line:last-child {
+            border-bottom: none;
+        }
+        .activity-line strong {
+            color: #0f172a;
+            text-align: right;
         }
         </style>
         """,
@@ -133,13 +382,12 @@ def inject_theme() -> None:
 def hero() -> None:
     st.markdown(
         """
-        <div style="padding: 1.2rem 0 0.4rem 0;">
-          <div class="small-muted">AI Teacher Benchmark Arena</div>
-          <h1 style="margin: 0.2rem 0 0.35rem 0; letter-spacing: 0;">K-12 Tutor Response Evaluation</h1>
-          <p style="max-width: 850px; color: #4b5563; font-size: 1.04rem;">
-            Compare tutor responses with a rigorous educational rubric for conceptual quality,
-            scaffolding, student adaptation, multilingual fidelity, safety, and learning impact.
-          </p>
+        <div class="topbar">
+          <div>
+            <div class="brand-mark">AI Teacher Benchmark Platform</div>
+            <h1 style="margin: 0.12rem 0 0 0; letter-spacing: 0; font-size: 1.75rem;">TeachBench Classroom</h1>
+          </div>
+          <div class="lesson-chip">RAG-grounded simulation</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -204,7 +452,7 @@ def _response_card(
             <span class="metric-pill">Pedagogy {scores["teaching_quality"]}/10</span>
             <span class="metric-pill">Conceptual {scores["correctness"]}/10</span>
           </div>
-          <hr style="border-color: #fed7aa; margin: 0.9rem 0;" />
+          <hr style="border-color: #bfdbfe; margin: 0.9rem 0;" />
           <div class="response-box">{safe_response}</div>
         </div>
         """,
