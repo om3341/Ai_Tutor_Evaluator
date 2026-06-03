@@ -14,7 +14,16 @@ from pydantic import ValidationError
 
 from backend.config import Settings
 from backend.database.models import Evaluation
-from backend.schemas import BenchmarkJudgeRequest, EvaluationRequest, JudgeEvaluation, SingleJudgeEvaluation
+from backend.schemas import (
+    BenchmarkJudgeRequest,
+    ConversationJudgeEvaluation,
+    EvaluationRequest,
+    JudgeEvaluation,
+    SimulationMessage,
+    SimulationRunRequest,
+    SingleJudgeEvaluation,
+)
+from backend.schemas.rag import RagContext
 
 
 class GeminiJudgeError(RuntimeError):
@@ -38,7 +47,7 @@ class GeminiAPIError(GeminiJudgeError):
 
 
 class GeminiJudge:
-    """Gemini-backed pairwise evaluator for AI teacher responses.
+    """Gemini-backed evaluator for educational responses and conversations.
 
     The Google Generative AI SDK is synchronous today, so this service keeps an
     async public API and runs the blocking SDK call in a worker thread. That
@@ -49,10 +58,13 @@ class GeminiJudge:
         self._settings = settings
         self._prompt_path = prompt_path or Path(__file__).resolve().parent / "prompts" / "judge_prompt.txt"
         self._report_prompt_path = Path(__file__).resolve().parent / "prompts" / "benchmark_report_prompt.txt"
+        self._conversation_prompt_path = Path(__file__).resolve().parent / "prompts" / "conversation_judge_prompt.txt"
         self._system_prompt = self._prompt_path.read_text(encoding="utf-8")
         self._report_system_prompt = self._report_prompt_path.read_text(encoding="utf-8")
+        self._conversation_system_prompt = self._conversation_prompt_path.read_text(encoding="utf-8")
         self._model: genai.GenerativeModel | None = None
         self._report_model: genai.GenerativeModel | None = None
+        self._conversation_model: genai.GenerativeModel | None = None
 
     def _get_model(self) -> genai.GenerativeModel:
         if not self._settings.gemini_api_key:
@@ -77,6 +89,18 @@ class GeminiJudge:
                 system_instruction=self._report_system_prompt,
             )
         return self._report_model
+
+    def _get_conversation_model(self) -> genai.GenerativeModel:
+        if not self._settings.gemini_api_key:
+            raise GeminiConfigurationError("GEMINI_API_KEY is not configured.")
+
+        if self._conversation_model is None:
+            genai.configure(api_key=self._settings.gemini_api_key)
+            self._conversation_model = genai.GenerativeModel(
+                model_name=self._settings.gemini_model_name,
+                system_instruction=self._conversation_system_prompt,
+            )
+        return self._conversation_model
 
     async def evaluate_pairwise(self, request: EvaluationRequest) -> JudgeEvaluation:
         """Compare response A vs B and return a validated structured judgment."""
@@ -161,6 +185,40 @@ class GeminiJudge:
             raise last_error
         raise GeminiAPIError(f"Gemini single judge failed after retries. Last error: {last_error}") from last_error
 
+    async def evaluate_conversation(
+        self,
+        request: SimulationRunRequest,
+        transcript: list[SimulationMessage],
+        rag_context: RagContext,
+    ) -> ConversationJudgeEvaluation:
+        """Evaluate a complete student/tutor transcript."""
+
+        last_error: Exception | None = None
+        for attempt in range(self._settings.gemini_max_retries + 1):
+            try:
+                raw_text = await asyncio.wait_for(
+                    asyncio.to_thread(self._call_conversation_sync, request, transcript, rag_context),
+                    timeout=self._settings.gemini_timeout_seconds,
+                )
+                return self._parse_and_validate_conversation(raw_text)
+            except asyncio.TimeoutError as exc:
+                raise GeminiTimeoutError("Gemini conversation judge request timed out.") from exc
+            except GeminiConfigurationError:
+                raise
+            except GeminiInvalidResponseError as exc:
+                last_error = exc
+                logger.warning("Gemini conversation judge returned invalid JSON: {}", exc)
+            except Exception as exc:
+                last_error = exc
+                logger.warning("Gemini conversation judge attempt failed: {}", exc)
+
+            if attempt < self._settings.gemini_max_retries:
+                await asyncio.sleep(self._retry_delay_seconds(attempt))
+
+        if isinstance(last_error, GeminiInvalidResponseError):
+            raise last_error
+        raise GeminiAPIError(f"Gemini conversation judge failed after retries. Last error: {last_error}") from last_error
+
     def _call_gemini_sync(self, request: EvaluationRequest) -> str:
         model = self._get_model()
         prompt = self._build_user_prompt(request)
@@ -197,6 +255,35 @@ class GeminiJudge:
         text = getattr(response, "text", None)
         if not text:
             raise GeminiInvalidResponseError("Gemini response did not contain text.")
+        return text
+
+    def _call_conversation_sync(
+        self,
+        request: SimulationRunRequest,
+        transcript: list[SimulationMessage],
+        rag_context: RagContext,
+    ) -> str:
+        model = self._get_conversation_model()
+        payload = {
+            "scenario": request.model_dump(),
+            "transcript": [message.model_dump() for message in transcript],
+            "retrieved_rag_context": rag_context.model_dump(),
+        }
+        response = model.generate_content(
+            "Read the complete ordered transcript and frozen retrieved RAG context before scoring. Evaluate learning "
+            "progression across turns, compare tutor claims against the retrieved context, compare the student's "
+            "initial and final understanding, and cite relevant turn numbers in the concise reasoning. Return only "
+            "the strict JSON object described in the system instructions.\n\n"
+            f"{json.dumps(payload, ensure_ascii=False, indent=2)}",
+            generation_config={
+                "temperature": 0.0,
+                "response_mime_type": "application/json",
+            },
+            request_options={"timeout": self._settings.gemini_timeout_seconds},
+        )
+        text = getattr(response, "text", None)
+        if not text:
+            raise GeminiInvalidResponseError("Gemini conversation judge response did not contain text.")
         return text
 
     async def generate_benchmark_report(self, evaluation: Evaluation) -> str:
@@ -286,6 +373,16 @@ class GeminiJudge:
             if isinstance(payload, dict) and isinstance(payload.get("reasoning"), str):
                 payload["reasoning"] = self._compact_text(payload["reasoning"], max_chars=800)
             return SingleJudgeEvaluation.model_validate(payload)
+        except (json.JSONDecodeError, ValidationError) as exc:
+            raise GeminiInvalidResponseError(str(exc)) from exc
+
+    def _parse_and_validate_conversation(self, raw_text: str) -> ConversationJudgeEvaluation:
+        json_text = self._extract_json(raw_text)
+        try:
+            payload: Any = json.loads(json_text)
+            if isinstance(payload, dict) and isinstance(payload.get("reasoning"), str):
+                payload["reasoning"] = self._compact_text(payload["reasoning"], max_chars=1200)
+            return ConversationJudgeEvaluation.model_validate(payload)
         except (json.JSONDecodeError, ValidationError) as exc:
             raise GeminiInvalidResponseError(str(exc)) from exc
 

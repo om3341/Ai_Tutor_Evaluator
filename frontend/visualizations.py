@@ -15,9 +15,9 @@ from frontend.utils import (
 
 
 PLOTLY_TEMPLATE = "plotly_white"
-COLOR_A = "#f97316"
+COLOR_A = "#16a34a"
 COLOR_B = "#64748b"
-ACCENT = "#ea580c"
+ACCENT = "#15803d"
 
 
 def radar_chart(evaluation: dict[str, Any], model_a: str, model_b: str) -> go.Figure:

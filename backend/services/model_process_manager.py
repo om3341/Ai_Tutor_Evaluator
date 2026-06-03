@@ -23,6 +23,7 @@ class ModelProcessConfig:
     label: str
     health_url: str
     start_command: str
+    stop_command: str = ""
 
 
 class ModelProcessManager:
@@ -58,23 +59,21 @@ class ModelProcessManager:
     def unload(self, model_name: str | None) -> None:
         if not model_name:
             return
+        config = self._config_for_model(model_name)
         process = self._processes.pop(model_name, None)
-        if process is None or process.poll() is not None:
-            return
+        if process is not None and process.poll() is None:
+            logger.info("Stopping managed model process model={} pid={}", model_name, process.pid)
+            self._terminate_process_group(process)
 
-        logger.info("Stopping managed model process model={} pid={}", model_name, process.pid)
-        try:
-            os.killpg(process.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            return
+        if config.stop_command.strip():
+            self._run_stop_command(model_name, config.stop_command)
 
     def _start_process(self, model_name: str, command: str) -> subprocess.Popen[bytes]:
         existing = self._processes.get(model_name)
         if existing is not None and existing.poll() is None:
             logger.info("Stopping stale managed model process before restart model={} pid={}", model_name, existing.pid)
             try:
-                os.killpg(existing.pid, signal.SIGTERM)
-                existing.wait(timeout=5)
+                self._terminate_process_group(existing)
             except (ProcessLookupError, subprocess.TimeoutExpired):
                 pass
 
@@ -94,6 +93,32 @@ class ModelProcessManager:
         self._processes[model_name] = process
         return process
 
+    @staticmethod
+    def _terminate_process_group(process: subprocess.Popen[bytes]) -> None:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+            process.wait(timeout=8)
+        except ProcessLookupError:
+            return
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait(timeout=5)
+
+    def _run_stop_command(self, model_name: str, command: str) -> None:
+        logger.info("Running model stop command for {}: {}", model_name, command)
+        safe_name = "".join(char if char.isalnum() else "_" for char in model_name.lower())
+        stdout_path = self._log_dir / f"{safe_name}.stop.out.log"
+        stderr_path = self._log_dir / f"{safe_name}.stop.err.log"
+        with stdout_path.open("ab") as stdout_handle, stderr_path.open("ab") as stderr_handle:
+            subprocess.run(
+                command,
+                shell=True,
+                stdout=stdout_handle,
+                stderr=stderr_handle,
+                timeout=20,
+                check=False,
+            )
+
     async def _wait_until_healthy(self, config: ModelProcessConfig, process: subprocess.Popen[bytes]) -> None:
         deadline = time.monotonic() + self._settings.model_startup_timeout_seconds
         while time.monotonic() < deadline:
@@ -101,6 +126,9 @@ class ModelProcessManager:
                 return
             exit_code = process.poll()
             if exit_code is not None:
+                if exit_code == 0:
+                    await asyncio.sleep(2.0)
+                    continue
                 recent_logs = self._recent_logs(config.label)
                 raise ModelLoadError(
                     f"{config.label} start command exited with code {exit_code} before becoming healthy. "
@@ -133,22 +161,39 @@ class ModelProcessManager:
 
     def _config_for_model(self, model_name: str) -> ModelProcessConfig:
         normalized = model_name.casefold()
+        if "qwen 3.5" in normalized or "qwen3.5" in normalized or "2b student" in normalized:
+            return ModelProcessConfig(
+                label="Qwen 3.5 2B student server",
+                health_url=f"{self._settings.qwen_student_base_url.rstrip('/')}/models",
+                start_command=self._settings.qwen_student_start_command,
+                stop_command=self._settings.qwen_student_stop_command,
+            )
         if "qwen" in normalized:
             return ModelProcessConfig(
-                label="Qwen vLLM server",
+                label="Qwen tutor server",
                 health_url=f"{self._settings.qwen_base_url.rstrip('/')}/models",
                 start_command=self._settings.qwen_start_command,
+                stop_command=self._settings.qwen_stop_command,
             )
         if "gemma" in normalized:
             return ModelProcessConfig(
                 label="Gemma Ollama server",
                 health_url=f"{self._settings.gemma_base_url.rstrip('/')}/api/tags",
                 start_command=self._settings.gemma_start_command,
+                stop_command=self._settings.gemma_stop_command,
             )
         if "llama" in normalized:
             return ModelProcessConfig(
                 label="Llama Ollama server",
                 health_url=f"{self._settings.llama_base_url.rstrip('/')}/api/tags",
                 start_command=self._settings.llama_start_command or self._settings.gemma_start_command,
+                stop_command=self._settings.llama_stop_command or self._settings.gemma_stop_command,
+            )
+        if "sarvam" in normalized:
+            return ModelProcessConfig(
+                label="Sarvam OpenAI-compatible server",
+                health_url=f"{self._settings.sarvam_base_url.rstrip('/')}/models",
+                start_command=self._settings.sarvam_start_command,
+                stop_command=self._settings.sarvam_stop_command,
             )
         raise ModelLoadError(f"No model loader configured for '{model_name}'.")

@@ -120,3 +120,66 @@ class BenchmarkItem(Base):
         Index("ix_benchmark_items_run_created", "run_id", "created_at"),
         Index("ix_benchmark_items_model_created", "model_name", "created_at"),
     )
+
+
+class ConversationRun(Base):
+    __tablename__ = "conversation_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tutor_model: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    student_model: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    topic: Mapped[str] = mapped_column(String(300), nullable=False, index=True)
+    student_level: Mapped[str] = mapped_column(String(120), nullable=False)
+    language: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    persona: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    turns: Mapped[int] = mapped_column(Integer, nullable=False)
+    transcript_json: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    retrieved_chunks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    retrieval_scores: Mapped[list[float]] = mapped_column(JSONB, nullable=False)
+    chunk_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    rag_context: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    retrieval_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    latency_metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    benchmark_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    model_config: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        Index("ix_conversation_runs_created_at", "created_at"),
+        Index("ix_conversation_runs_models", "tutor_model", "student_model"),
+    )
+
+
+class EvaluationReport(Base):
+    __tablename__ = "evaluation_reports"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    report_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    reasoning: Mapped[str] = mapped_column(Text, nullable=False)
+    failure_modes: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    judge_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        Index("ix_evaluation_reports_run_type", "run_id", "report_type"),
+    )
+
+
+class BenchmarkHistory(Base):
+    __tablename__ = "benchmark_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    benchmark_type: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    tutor_model: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    student_model: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    topic: Mapped[str] = mapped_column(String(300), nullable=False)
+    aggregate_metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        Index("ix_benchmark_history_created_at", "created_at"),
+        Index("ix_benchmark_history_type_created", "benchmark_type", "created_at"),
+    )

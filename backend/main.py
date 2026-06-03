@@ -9,7 +9,7 @@ from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api import analytics_router, benchmarks_router, generation_router, leaderboard_router
+from backend.api import analytics_router, benchmarks_router, conversations_router, generation_router, leaderboard_router
 from backend.benchmark_runner import PairwiseBenchmarkRunner
 from backend.config import Settings, get_settings
 from backend.database.connection import get_db_session
@@ -22,10 +22,13 @@ from backend.judge import (
 )
 from backend.models.gemma import GemmaClient, LlamaClient
 from backend.models.qwen import QwenClient
+from backend.rag import EducationalRetriever, QdrantKnowledgeClient, RagContextBuilder, RetrievalService
 from backend.schemas import ErrorResponse, EvaluationRequest, EvaluationResponse
 from backend.services import AnalyticsService, RankingService
 from backend.services.benchmark_service import BenchmarkService
 from backend.services.model_process_manager import ModelProcessManager
+from backend.simulation import ConversationEvaluationPipeline, SimulationEngine, StudentAgent, TutorAgent
+from backend.simulation.model_gateway import ModelGateway
 from backend.text_cleaning import strip_thinking_tags
 
 
@@ -53,7 +56,28 @@ def create_app() -> FastAPI:
     app.state.gemma_client = GemmaClient(settings=settings)
     app.state.llama_client = LlamaClient(settings=settings)
     app.state.active_benchmark_model = None
+    app.state.active_tutor_model = None
+    app.state.active_student_model = None
+    app.state.simulation_running = False
     app.state.model_process_manager = ModelProcessManager(settings=settings)
+    simulation_gateway = ModelGateway(settings=settings)
+    qdrant_client = QdrantKnowledgeClient(settings=settings)
+    rag_context_builder = RagContextBuilder()
+    retrieval_service = RetrievalService(
+        settings=settings,
+        client=qdrant_client,
+        retriever=EducationalRetriever(settings=settings, client=qdrant_client),
+        context_builder=rag_context_builder,
+    )
+    app.state.retrieval_service = retrieval_service
+    app.state.conversation_pipeline = ConversationEvaluationPipeline(
+        engine=SimulationEngine(
+            student_agent=StudentAgent(simulation_gateway),
+            tutor_agent=TutorAgent(simulation_gateway, rag_context_builder),
+        ),
+        judge=judge,
+        retrieval_service=retrieval_service,
+    )
     app.state.benchmark_service = BenchmarkService(
         settings=settings,
         judge=judge,
@@ -65,6 +89,7 @@ def create_app() -> FastAPI:
     app.state.analytics_service = AnalyticsService()
     app.include_router(analytics_router)
     app.include_router(benchmarks_router)
+    app.include_router(conversations_router)
     app.include_router(generation_router)
     app.include_router(leaderboard_router)
 

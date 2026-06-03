@@ -7,7 +7,10 @@ This project is designed for educational AI evaluation, not chatbot battle ranki
 ## Features
 
 - Single-model benchmark workflow with one active model at a time
+- Student-tutor simulation workflow with one tutor model and one student model active during a session
 - Streamlit dashboard for loading models, stepping through benchmark items, editing prompts, generating responses, and evaluating collected outputs
+- Simulation control panel for topic, grade level, language, persona, temperatures, and turn count
+- Conversation replay viewer for full student/tutor transcripts
 - FastAPI backend with typed Pydantic schemas
 - Gemini judge integration for single-response educational evaluation
 - PostgreSQL persistence with async SQLAlchemy and Alembic migrations
@@ -33,6 +36,24 @@ The judge scores each response across seven core categories:
 - `conversation_quality`
 
 The platform also computes aggregate benchmark scores, safety classifications, learning-effectiveness labels, latency totals, and dashboard-ready analytics.
+
+Student-tutor simulations add dialogue-level metrics:
+
+- `learning_gain`
+- `misconception_recovery`
+- `scaffolding_effectiveness`
+- `student_engagement`
+- `retention_support`
+
+RAG-grounded simulations retrieve educational knowledge from Qdrant once per
+run, freeze that context for every tutor turn, and store the exact chunks,
+scores, IDs, and retrieval metadata for reproducible replay. Grounding metrics
+include:
+
+- `knowledge_grounding`
+- `context_faithfulness`
+- `retrieval_utilization`
+- `educational_grounding`
 
 ## Architecture
 
@@ -70,6 +91,18 @@ Root `app.py` launches the Streamlit frontend. `backend/main.py` launches the Fa
 
 This staged flow helps avoid unnecessary judge calls and works better with rate-limited judge APIs.
 
+## Student-Tutor Simulation Flow
+
+1. Select a tutor model and a student model.
+2. Choose a topic, student level, language, persona, temperatures, and turn count.
+3. Load the tutor and student models.
+4. Run the simulation.
+5. The student agent starts the conversation and reacts over multiple turns.
+6. The tutor agent teaches, scaffolds, and responds to misconceptions.
+7. The full transcript is stored.
+8. Gemini evaluates the complete dialogue.
+9. Review transcript replay, learning-gain metrics, scaffolding, engagement, and failure modes.
+
 ## Setup
 
 Create a virtual environment and install dependencies:
@@ -91,7 +124,9 @@ Edit `.env` with your local settings:
 ```bash
 GEMINI_API_KEY=your_gemini_api_key_here
 DATABASE_URL=postgresql+asyncpg://llm_compare:llm_compare@127.0.0.1:5432/llm_compare
-QWEN_BASE_URL=http://your-vllm-host:8001/v1
+QDRANT_URL=http://10.240.166.7:6333
+QDRANT_COLLECTION_NAME=ebuddy_class6
+QWEN_BASE_URL=http://your-qwen-host:8001/v1
 GEMMA_BASE_URL=http://127.0.0.1:11435
 ```
 
@@ -132,16 +167,16 @@ The frontend expects the backend at `http://127.0.0.1:8000` by default.
 
 ## Model Servers
 
-Qwen can be served through vLLM:
+Qwen 3.5 4B can be served through the lightweight OpenAI-compatible
+Transformers server in `scripts/qwen35_student_server.py`:
 
 ```bash
-vllm serve Qwen/Qwen3-8B \
+QWEN35_MODEL_PATH=/home/btechuser/models/Qwen3.5-4B \
+QWEN35_SERVED_MODEL_NAME=Qwen/Qwen3.5-4B \
+QWEN35_STUDENT_DEVICE=cuda \
+uvicorn qwen35_student_server:app \
   --host 0.0.0.0 \
-  --port 8001 \
-  --gpu-memory-utilization 0.90 \
-  --max-model-len 4096 \
-  --max-num-seqs 1 \
-  --trust-remote-code
+  --port 8001
 ```
 
 Ollama models can be exposed locally or through an SSH tunnel:
@@ -182,6 +217,21 @@ GET  /benchmarks/runs
 GET  /benchmarks/runs/{run_id}
 ```
 
+Student-tutor simulations:
+
+```text
+GET  /simulations/personas
+GET  /simulations/state
+POST /simulations/load
+POST /simulations/run
+POST /simulations/stop
+POST /simulations/tutor/unload
+POST /simulations/student/unload
+POST /simulations/unload
+GET  /simulations/runs
+GET  /simulations/runs/{run_id}
+```
+
 Model generation:
 
 ```text
@@ -211,7 +261,7 @@ curl -X POST http://127.0.0.1:8000/models/qwen/generate \
     "student_prompt": "Explain photosynthesis in Hinglish for class 6 in 3 short points.",
     "student_level": "Class 6",
     "language": "Hinglish",
-    "model_name": "Qwen 3.8B"
+    "model_name": "Qwen 3.5 4B"
   }'
 ```
 
@@ -221,7 +271,7 @@ curl -X POST http://127.0.0.1:8000/models/qwen/generate \
 curl -X POST http://127.0.0.1:8000/benchmarks/evaluate-collected \
   -H "Content-Type: application/json" \
   -d '{
-    "model_name": "Qwen 3.8B",
+    "model_name": "Qwen 3.5 4B",
     "dataset_name": "k12_teacher_core_v1",
     "items": [
       {
